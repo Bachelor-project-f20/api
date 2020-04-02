@@ -1,0 +1,10 @@
+schema:
+- schema.graphql
+exec:
+  filename: generated.go
+
+resolver:
+  filename: tmp/resolver.go
+  type: Resolver
+autobind:
+    - github.com/Bachelor-project-f20/shared/models

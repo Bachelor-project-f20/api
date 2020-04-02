@@ -1,0 +1,27 @@
+type Query {
+    getUser(user: User!): Boolean! #Dummy field
+}
+
+type Mutation {
+    createUser(user: CreateUser!): Boolean!
+    updateUser(user: UpdateUser!): Boolean!
+    deleteUser(user: DeleteUser!): Boolean!
+}
+
+input CreateUser {
+    user: User!
+}
+
+input UpdateUser {
+    user: User!
+}
+
+input DeleteUser {
+    user: User!
+}
+
+input User {
+    id: String!
+    officeId: String!
+    name: String!
+}

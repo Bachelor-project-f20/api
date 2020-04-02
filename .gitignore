@@ -1,0 +1,11 @@
+*
+
+!/**/
+!*.*
+!Makefile
+!Dockerfile
+
+**/secret.go
+**/gen
+**/tmp
+**generated.go
