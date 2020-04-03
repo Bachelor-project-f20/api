@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -9,7 +8,7 @@ import (
 
 	"github.com/99designs/gqlgen/handler"
 	"github.com/Bachelor-project-f20/api/graphql"
-	"github.com/Bachelor-project-f20/api/lib/configure"
+	"github.com/Bachelor-project-f20/shared/config"
 	"github.com/go-chi/chi"
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
@@ -21,16 +20,19 @@ type service struct {
 
 func Run() {
 	configFile := "###" //TODO
-	config, err := configure.ExtractConfiguration(configFile)
-
+	configRes, err := config.ConfigService(
+		configFile,
+		config.ConfigValues{
+			UseEmitter: true,
+		},
+	)
 	if err != nil {
-		fmt.Printf("Error extracting config file: %v \n", err)
-		fmt.Println("Using default configuration")
-
+		log.Fatalln("configuration failed, error: ", err)
+		panic("configuration failed")
 	}
 
 	resolver := graphql.Resolver{
-		Emitter: config.EventEmitter,
+		Emitter: configRes.EventEmitter,
 	}
 
 	router := chi.NewRouter()
