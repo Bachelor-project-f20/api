@@ -1,12 +1,15 @@
 package api
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/Bachelor-project-f20/eventToGo"
 	"github.com/gorilla/websocket"
 
+	gql "github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -60,6 +63,14 @@ func Run() {
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
+	})
+
+	//
+	srv.AroundResponses(func(ctx context.Context, next gql.ResponseHandler) *gql.Response {
+		// This function will be called around each response in the operation. next() will evaluate
+		// and return a single response.
+		fmt.Println("HERE!!!!!!")
+		return next(ctx)
 	})
 
 	router.Handle("/", playground.Handler("GraphQL Playground", "/query"))
