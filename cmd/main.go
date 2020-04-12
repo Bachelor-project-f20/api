@@ -1,7 +1,11 @@
-package main
+package cmd
 
-import "github.com/Bachelor-project-f20/api"
+import api "github.com/Bachelor-project-f20/api/pkg"
 
-func main() {
+// func main() {
+// 	api.Run()
+// }
+
+func Run() {
 	api.Run()
 }
