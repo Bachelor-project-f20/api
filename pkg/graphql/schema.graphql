@@ -8,10 +8,6 @@ type Mutation {
     deleteUser(user: DeleteUser!, id: String!): Boolean!
 }
 
-type Subscription {
-  userJoined(user: String!): String!
-}
-
 input CreateUser {
     user: User!
 }

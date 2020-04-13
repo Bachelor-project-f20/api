@@ -4,7 +4,6 @@ package graphql
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -70,27 +69,11 @@ func (r *queryResolver) GetUser(ctx context.Context, user models.User) (bool, er
 	return false, nil
 }
 
-func (r *subscriptionResolver) UserJoined(ctx context.Context, user string) (<-chan string, error) {
-	fmt.Println("USERJOINED")
-	c := make(chan string)
-	go func() {
-		for {
-			time.Sleep(1000 * time.Millisecond)
-			c <- "test"
-		}
-
-	}()
-	return c, nil
-}
-
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
-
-// Subscription returns SubscriptionResolver implementation.
-func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
