@@ -1,6 +1,6 @@
 package main
 
-import "github.com/Bachelor-project-f20/api"
+import api "github.com/Bachelor-project-f20/api/pkg"
 
 func main() {
 	api.Run()

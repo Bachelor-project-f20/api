@@ -3,9 +3,9 @@ type Query {
 }
 
 type Mutation {
-    createUser(user: CreateUser!): Boolean!
-    updateUser(user: UpdateUser!): Boolean!
-    deleteUser(user: DeleteUser!): Boolean!
+    createUser(user: CreateUser!, id: String!): Boolean!
+    updateUser(user: UpdateUser!, id: String!): Boolean!
+    deleteUser(user: DeleteUser!, id: String!): Boolean!
 }
 
 input CreateUser {

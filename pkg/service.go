@@ -1,18 +1,22 @@
 package api
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/Bachelor-project-f20/eventToGo"
-	"github.com/gorilla/websocket"
 
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
+	"github.com/99designs/gqlgen/graphql/handler/lru"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/Bachelor-project-f20/api/graphql"
+	"github.com/Bachelor-project-f20/api/pkg/graphql"
+	sse "github.com/Bachelor-project-f20/api/pkg/sse"
 	"github.com/Bachelor-project-f20/shared/config"
 	"github.com/go-chi/chi"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
 )
 
@@ -25,7 +29,8 @@ func Run() {
 	configRes, err := config.ConfigService(
 		configFile,
 		config.ConfigValues{
-			UseEmitter: true,
+			UseEmitter:  true,
+			UseListener: true,
 		},
 	)
 	if err != nil {
@@ -35,6 +40,12 @@ func Run() {
 
 	resolver := graphql.Resolver{
 		Emitter: configRes.EventEmitter,
+	}
+
+	eventChan, err := setupEventListener(configRes.EventListener)
+	if err != nil {
+		log.Fatalln("setup eventlistener failed, error: ", err)
+		panic("setup eventlistener failed")
 	}
 
 	router := chi.NewRouter()
@@ -50,20 +61,36 @@ func Run() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}).Handler)
 
-	srv := handler.NewDefaultServer(graphql.NewExecutableSchema(graphql.Config{Resolvers: &resolver}))
-	srv.AddTransport(transport.Websocket{
-		Upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				// Check against your desired domains here
-				return r.Host == "http://localhost:8081"
-			},
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
-		},
+	//srv := handler.NewDefaultServer(graphql.NewExecutableSchema(graphql.Config{Resolvers: &resolver}))
+	srv := handler.New(graphql.NewExecutableSchema(graphql.Config{Resolvers: &resolver}))
+
+	//srv.AddTransport(sse.SSE{})
+	srv.AddTransport(transport.Options{})
+	srv.AddTransport(transport.GET{})
+	srv.AddTransport(transport.POST{})
+	srv.AddTransport(transport.MultipartForm{})
+
+	srv.SetQueryCache(lru.New(1000))
+
+	srv.Use(extension.Introspection{})
+	srv.Use(extension.AutomaticPersistedQuery{
+		Cache: lru.New(100),
 	})
 
-	router.Handle("/", playground.Handler("GraphQL Playground", "/query"))
-	router.Handle("/query", srv)
+	router.Handle("/", playground.Handler("GraphQL Playground", "/api"))
+	router.Handle("/api", srv)
+
+	sseHandler := sse.NewSSEHandler(eventChan)
+	router.HandleFunc("/sse", sseHandler.Handler)
+
+	go func() {
+		fmt.Println("Serving metrics API")
+
+		h := http.NewServeMux()
+		h.Handle("/metrics", promhttp.Handler())
+
+		http.ListenAndServe(":9191", h)
+	}()
 
 	log.Println("API: Listen and serve at port 8081")
 	err = http.ListenAndServe(":8081", router)
