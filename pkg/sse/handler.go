@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 
-	ob "github.com/Bachelor-project-f20/go-outbox"
 	models "github.com/Bachelor-project-f20/shared/models"
 	"github.com/golang/protobuf/proto"
 )
@@ -16,15 +15,13 @@ type Client struct {
 }
 
 type SSEHandler struct {
-	outbox         ob.Outbox
 	eventChan      <-chan models.Event
 	clients        map[string]chan string
 	closingClients chan string
 }
 
-func NewSSEHandler(outbox ob.Outbox, eventChan <-chan models.Event) SSEHandler {
+func NewSSEHandler(eventChan <-chan models.Event) SSEHandler {
 	sseh := SSEHandler{
-		outbox,
 		eventChan,
 		make(map[string]chan string),
 		make(chan string, 10),
@@ -79,7 +76,7 @@ func (s *SSEHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
-	//log.Printf("Client: %v \n", r.RemoteAddr)
+
 	msgChan := s.clients[r.RemoteAddr]
 	if msgChan == nil {
 		log.Println("New client: ", r.RemoteAddr)
@@ -87,8 +84,6 @@ func (s *SSEHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		s.clients[r.RemoteAddr] = msgChan
 		msgChan <- "{\"apiTag\": " + "\"" + r.RemoteAddr + "\"}"
 	}
-	//var client Client
-	//s.outbox.GetDBConnection().FirstOrCreate(&client, Client{ID: r.RemoteAddr})
 
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -97,11 +92,6 @@ func (s *SSEHandler) Handler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		s.closingClients <- r.RemoteAddr
 	}()
-
-	//fmt.Fprintf(w, "data: %v\n\n", "ping")
-	//fmt.Fprint(w, "data: ", rand.Intn(100), ",", rand.Intn(100), "\n\n")
-	//fmt.Printf("HERE")
-	//fmt.Fprintf(w, ": no\n\n")
 
 	notify := r.Context().Done()
 	go func() {
@@ -116,24 +106,4 @@ func (s *SSEHandler) Handler(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 		log.Println("Send done")
 	}
-
-	// timeout := time.After(10 * time.Second)
-	// select {
-	// case ev := <-s.eventChan:
-	// 	var buf bytes.Buffer
-	// 	enc := json.NewEncoder(&buf)
-	// 	enc.Encode(ev)
-	// 	fmt.Fprintf(w, "data: %v\n\n", buf.String())
-	// 	fmt.Printf("data: %v\n", buf.String())
-	// case <-timeout:
-	// 	fmt.Println("Time out")
-	// 	fmt.Fprintf(w, "event: %v\n", "ping")
-	// 	fmt.Fprint(w, "data: ", rand.Intn(100), ",", rand.Intn(100), "\n\n")
-	// 	// fmt.Fprintf(w, ": no\n\n")
-	// }
-
-	//Send event
-	// if f, ok := w.(http.Flusher); ok {
-	// 	f.Flush()
-	// }
 }

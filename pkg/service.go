@@ -29,10 +29,8 @@ func Run() {
 	configRes, err := config.ConfigService(
 		configFile,
 		config.ConfigValues{
-			UseEmitter:   true,
-			UseListener:  true,
-			UseOutbox:    true,
-			OutboxModels: []interface{}{sse.Client{}},
+			UseEmitter:  true,
+			UseListener: true,
 		},
 	)
 	if err != nil {
@@ -79,42 +77,10 @@ func Run() {
 		Cache: lru.New(100),
 	})
 
-	//return srv
-	// srv.AddTransport(transport.Websocket{
-	// 	Upgrader: websocket.Upgrader{
-	// 		CheckOrigin: func(r *http.Request) bool {
-	// 			// Check against your desired domains here
-	// 			fmt.Println("HERE")
-	// 			return r.Host == "http://localhost:8081"
-	// 		},
-	// 		ReadBufferSize:  1024,
-	// 		WriteBufferSize: 1024,
-	// 	},
-	// })
-
-	//
-	// srv.AroundResponses(func(ctx context.Context, next gql.ResponseHandler) *gql.Response {
-	// 	// This function will be called around each response in the operation. next() will evaluate
-	// 	// and return a single response.
-	// 	fmt.Println("HERE!!!!!!")
-	// 	s := next(ctx)
-	// 	fmt.Println(s)
-	// 	return s
-	// })
-
-	// srv.AroundOperations(func(ctx context.Context, next gql.OperationHandler) gql.ResponseHandler {
-	// 	// This function will be called around each response in the operation. next() will evaluate
-	// 	// and return a single response.
-	// 	fmt.Println("HERE!!!!!!")
-	// 	s := next(ctx)
-	// 	fmt.Println(s)
-	// 	return s
-	// })
-
 	router.Handle("/", playground.Handler("GraphQL Playground", "/api"))
 	router.Handle("/api", srv)
 
-	sseHandler := sse.NewSSEHandler(configRes.Outbox, eventChan)
+	sseHandler := sse.NewSSEHandler(eventChan)
 	router.HandleFunc("/sse", sseHandler.Handler)
 
 	go func() {

@@ -31,7 +31,6 @@ func (r *mutationResolver) emitEvent(payLoad []byte, eventType models.UserEvents
 		Payload:   payLoad,
 		ApiTag:    apiTag,
 	}
-	fmt.Println("emitEvent apiTag: ", event.ApiTag)
 	r.Emitter.Emit(*event)
 	return true, nil
 }
