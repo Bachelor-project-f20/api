@@ -20,7 +20,7 @@ type Resolver struct {
 	Emitter eventToGo.EventEmitter
 }
 
-func (r *mutationResolver) emitEvent(payLoad []byte, eventType models.UserEvents) (bool, error) {
+func (r *mutationResolver) emitEvent(payLoad []byte, eventType models.UserEvents, apiTag string) (bool, error) {
 	id, _ := uuid.NewV4()
 
 	event := &models.Event{
@@ -29,39 +29,41 @@ func (r *mutationResolver) emitEvent(payLoad []byte, eventType models.UserEvents
 		EventName: eventType.String(),
 		Timestamp: time.Now().UnixNano(),
 		Payload:   payLoad,
+		ApiTag:    apiTag,
 	}
+	fmt.Println("emitEvent apiTag: ", event.ApiTag)
 	r.Emitter.Emit(*event)
 	return true, nil
 }
 
-func (r *mutationResolver) CreateUser(ctx context.Context, user models.CreateUser) (bool, error) {
+func (r *mutationResolver) CreateUser(ctx context.Context, user models.CreateUser, id string) (bool, error) {
 	marshalEvent, err := proto.Marshal(&user)
 	if err != nil {
 		log.Fatalf("Error with proto: %v \n", err)
 		return false, err
 	}
 
-	return r.emitEvent(marshalEvent, models.UserEvents_CREATE_USER)
+	return r.emitEvent(marshalEvent, models.UserEvents_CREATE_USER, id)
 }
 
-func (r *mutationResolver) UpdateUser(ctx context.Context, user models.UpdateUser) (bool, error) {
+func (r *mutationResolver) UpdateUser(ctx context.Context, user models.UpdateUser, id string) (bool, error) {
 	marshalEvent, err := proto.Marshal(&user)
 	if err != nil {
 		log.Fatalf("Error with proto: %v \n", err)
 		return false, err
 	}
 
-	return r.emitEvent(marshalEvent, models.UserEvents_UPDATE_USER)
+	return r.emitEvent(marshalEvent, models.UserEvents_UPDATE_USER, id)
 }
 
-func (r *mutationResolver) DeleteUser(ctx context.Context, user models.DeleteUser) (bool, error) {
+func (r *mutationResolver) DeleteUser(ctx context.Context, user models.DeleteUser, id string) (bool, error) {
 	marshalEvent, err := proto.Marshal(&user)
 	if err != nil {
 		log.Fatalf("Error with proto: %v \n", err)
 		return false, err
 	}
 
-	return r.emitEvent(marshalEvent, models.UserEvents_DELETE_USER)
+	return r.emitEvent(marshalEvent, models.UserEvents_DELETE_USER, id)
 }
 
 //DUMMY func

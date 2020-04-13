@@ -1,10 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
-	sse "github.com/Bachelor-project-f20/api/sse"
 	"github.com/Bachelor-project-f20/eventToGo"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -12,9 +12,11 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/lru"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/Bachelor-project-f20/api/graphql"
+	"github.com/Bachelor-project-f20/api/pkg/graphql"
+	sse "github.com/Bachelor-project-f20/api/pkg/sse"
 	"github.com/Bachelor-project-f20/shared/config"
 	"github.com/go-chi/chi"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
 )
 
@@ -27,7 +29,10 @@ func Run() {
 	configRes, err := config.ConfigService(
 		configFile,
 		config.ConfigValues{
-			UseEmitter: true,
+			UseEmitter:   true,
+			UseListener:  true,
+			UseOutbox:    true,
+			OutboxModels: []interface{}{sse.Client{}},
 		},
 	)
 	if err != nil {
@@ -37,6 +42,12 @@ func Run() {
 
 	resolver := graphql.Resolver{
 		Emitter: configRes.EventEmitter,
+	}
+
+	eventChan, err := setupEventListener(configRes.EventListener)
+	if err != nil {
+		log.Fatalln("setup eventlistener failed, error: ", err)
+		panic("setup eventlistener failed")
 	}
 
 	router := chi.NewRouter()
@@ -55,7 +66,7 @@ func Run() {
 	//srv := handler.NewDefaultServer(graphql.NewExecutableSchema(graphql.Config{Resolvers: &resolver}))
 	srv := handler.New(graphql.NewExecutableSchema(graphql.Config{Resolvers: &resolver}))
 
-	srv.AddTransport(sse.SSE{})
+	//srv.AddTransport(sse.SSE{})
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})
 	srv.AddTransport(transport.POST{})
@@ -102,6 +113,18 @@ func Run() {
 
 	router.Handle("/", playground.Handler("GraphQL Playground", "/api"))
 	router.Handle("/api", srv)
+
+	sseHandler := sse.NewSSEHandler(configRes.Outbox, eventChan)
+	router.HandleFunc("/sse", sseHandler.Handler)
+
+	go func() {
+		fmt.Println("Serving metrics API")
+
+		h := http.NewServeMux()
+		h.Handle("/metrics", promhttp.Handler())
+
+		http.ListenAndServe(":9191", h)
+	}()
 
 	log.Println("API: Listen and serve at port 8081")
 	err = http.ListenAndServe(":8081", router)
